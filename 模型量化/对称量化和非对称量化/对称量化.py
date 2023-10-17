@@ -1,8 +1,3 @@
-# TensorRT使用的对称量化，无需引入偏移量来解决截断的问题，因此优点是计算量小，缺点是量化的数据是非饱和的
-# Scale = |R_max| / |Q_max|  R_max表示输入数据的最大值, Q_max表示量化的最大值，例如int8为255
-# Q = Round(R / Scale) # 量化
-# R = Q * Scale # 反量化
-
 import numpy as np
 
 # 截断
