@@ -4,9 +4,8 @@ import torch.utils.data
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
-import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
-from VAE import VAE
+from VAE_1 import VAE
 
 class process():
     def __init__(self, device, image_size, h_dim, z_dim, num_epochs, 
@@ -75,16 +74,7 @@ if __name__ == "__main__":
     if not os.path.exists(sample_dir):
         os.makedirs(sample_dir)
 
-    # MNIST dataset
-    # dataset = datasets.MNIST(root = './data', 
-    #                             train = True, 
-    #                             transform = transforms.ToTensor(), 
-    #                             download = True)
-    # # Data loader
-    # data_loader = torch.utils.data.DataLoader(dataset = dataset,
-    #                                         batch_size = batch_size, 
-    #                                         shuffle=True)
-    
+    # FashionMNIST dataset
     dataset = datasets.FashionMNIST(root='./data', 
                          train=True, 
                          transform=transforms.ToTensor(), 
