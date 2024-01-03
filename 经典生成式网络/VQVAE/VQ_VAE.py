@@ -8,7 +8,6 @@ class VectorQuantizer(nn.Module):
         
         self._embedding_dim = embedding_dim
         self._num_embeddings = num_embeddings
-        
         self._embedding = nn.Embedding(self._num_embeddings, self._embedding_dim)
         self._embedding.weight.data.uniform_(-1/self._num_embeddings, 1/self._num_embeddings)
         self._commitment_cost = commitment_cost
@@ -35,11 +34,11 @@ class VectorQuantizer(nn.Module):
         quantized = torch.matmul(encodings, self._embedding.weight).view(input_shape)
         
         # Loss
-        e_latent_loss = F.mse_loss(quantized.detach(), inputs)
-        q_latent_loss = F.mse_loss(quantized, inputs.detach())
+        e_latent_loss = F.mse_loss(quantized.detach(), inputs)  # 论文中损失函数的第三项
+        q_latent_loss = F.mse_loss(quantized, inputs.detach()) # 论文中损失函数的第二项
         loss = q_latent_loss + self._commitment_cost * e_latent_loss
         
-        quantized = inputs + (quantized - inputs).detach()
+        quantized = inputs + (quantized - inputs).detach() # 梯度复制
         avg_probs = torch.mean(encodings, dim=0)
         perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
         
@@ -72,7 +71,7 @@ class VectorQuantizerEMA(nn.Module):
         # Flatten input BHWC -> BHW, C
         flat_input = inputs.view(-1, self._embedding_dim)
         
-        # Calculate distances
+        # Calculate distances 计算与embedding space中所有embedding的距离
         distances = (torch.sum(flat_input**2, dim=1, keepdim=True) 
                     + torch.sum(self._embedding.weight**2, dim=1)
                     - 2 * torch.matmul(flat_input, self._embedding.weight.t()))
@@ -94,12 +93,12 @@ class VectorQuantizerEMA(nn.Module):
             n = torch.sum(self._ema_cluster_size.data)
             self._ema_cluster_size = (
                 (self._ema_cluster_size + self._epsilon)
-                / (n + self._num_embeddings * self._epsilon) * n)
+                / (n + self._num_embeddings * self._epsilon) * n) 
             
             dw = torch.matmul(encodings.t(), flat_input)
-            self._ema_w = nn.Parameter(self._ema_w * self._decay + (1 - self._decay) * dw)
+            self._ema_w = nn.Parameter(self._ema_w * self._decay + (1 - self._decay) * dw) 
             
-            self._embedding.weight = nn.Parameter(self._ema_w / self._ema_cluster_size.unsqueeze(1))
+            self._embedding.weight = nn.Parameter(self._ema_w / self._ema_cluster_size.unsqueeze(1)) # 论文中公式(8)
         
         # Loss
         e_latent_loss = F.mse_loss(quantized.detach(), inputs) # 计算encoder输出（即inputs）和decoder输入（即quantized）之间的损失
@@ -145,7 +144,6 @@ class ResidualStack(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
         super(Encoder, self).__init__()
-
         self._conv_1 = nn.Conv2d(in_channels = in_channels,
                                  out_channels = num_hiddens//2,
                                  kernel_size = 4,
@@ -179,17 +177,14 @@ class Decoder(nn.Module):
                                  out_channels=num_hiddens,
                                  kernel_size=3, 
                                  stride=1, padding=1)
-        
         self._residual_stack = ResidualStack(in_channels=num_hiddens,
                                              num_hiddens=num_hiddens,
                                              num_residual_layers=num_residual_layers,
                                              num_residual_hiddens=num_residual_hiddens)
-        
         self._conv_trans_1 = nn.ConvTranspose2d(in_channels=num_hiddens, 
                                                 out_channels=num_hiddens//2,
                                                 kernel_size=4, 
                                                 stride=2, padding=1)
-        
         self._conv_trans_2 = nn.ConvTranspose2d(in_channels=num_hiddens//2, 
                                                 out_channels=3,
                                                 kernel_size=4, 
